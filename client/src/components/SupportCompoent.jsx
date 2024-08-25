@@ -26,7 +26,7 @@ const SupportComponent = () => {
     });
 
     // Listen for chat requests
-    socketInstance.on("chat-request", ({ message, roomid }) => {
+    socketInstance.on("chat-request", ({ message, roomid,accepted }) => {
       setUserMsg(message);
       setRoomId(roomid);
       setRequestAlert(true);
