@@ -34,7 +34,7 @@ io.on("connection", (socket) => {
 
     console.log("Msg-->", message);
     console.log("RoomId-->", roomid);
-    io.to(SupportRroom).emit("chat-request", { message, roomid, accepted: 0 });
+    io.to(SupportRroom).emit("chat-request", { message, roomid});
   });
 
   socket.on("accept-chat-request", ({ roomid, leaveRoom }) => {
