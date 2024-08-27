@@ -77,6 +77,8 @@
 import express from "express";
 import { Server } from "socket.io";
 import http from "http";
+// import { connectKafkaProducer } from "./config/kafka.config.js";
+// import { produceChatRequest,consumeChatRequests } from "./config/kafka.config.js";
 
 const app = express();
 const PORT = 5000;
@@ -104,19 +106,78 @@ io.on("connection", (socket) => {
 
     // console.log(data);
   });
-  socket.on("request-from-user", ({ SupportRroom, message, roomid }) => {
+  // socket.on("request-from-user", ({ SupportRroom, message, roomid }) => {
+  //   if (roomid) {
+  //     socket.join(roomid);
+  //   }
+
+  //   console.log("Msg-->", message);
+  //   console.log("RoomId-->", roomid);
+
+
+
+
+
+  //   chatRequests.push({ roomid, accepted: false });
+
+  //   const filterRequest = chatRequests.find((req) => req.roomid === roomid);
+  //   if (filterRequest !== roomid) {
+  //     io.to(SupportRroom).emit("chat-request", {
+  //       chatRequests,
+  //       message,
+  //       roomid,
+  //     });
+  //   }
+
+  //   // try {
+  //   //   await produceChatRequest("chat_requests", chatRequests);
+  //   // } catch (error) {
+  //   //   console.log("Error producing chat requet to kafka",error)
+  //   // }
+
+  //   // io.to(SupportRroom).emit("Remove-chat-request",)
+  // });
+
+
+
+  socket.on("request-from-user", async ({ SupportRroom, message, roomid }) => {
     if (roomid) {
       socket.join(roomid);
     }
 
     console.log("Msg-->", message);
     console.log("RoomId-->", roomid);
-    chatRequests.push({ roomid, accepted: false });
-    io.to(SupportRroom).emit("chat-request", { chatRequests, message, roomid });
 
-    // io.to(SupportRroom).emit("Remove-chat-request",)
+    // Check if there are any agents in the support room
+    const roomSize = io.sockets.adapter.rooms.get(SupportRroom)?.size || 0;
+
+    console.log(roomSize)
+    if (roomSize > 0) {
+      // There are agents available, proceed with the request
+      chatRequests.push({ roomid, accepted: false });
+      
+      const filterRequest = chatRequests.find((req) => req.roomid === roomid);
+      if (filterRequest !== roomid) {
+        io.to(SupportRroom).emit("chat-request", {
+          chatRequests,
+          message,
+          roomid,
+        });
+      }
+      
+      try {
+        // Uncomment and adjust this line if Kafka is used
+        // await produceChatRequest("chat_requests", chatRequests);
+      } catch (error) {
+        console.log("Error producing chat request to Kafka", error);
+      }
+    } else {
+      // No agents available, notify the user
+      socket.emit("chat-request-failed", {
+        message: "All support agents are busy right now. Please try again later."
+      });
+    }
   });
-
   socket.on("accept-chat-request", ({ roomid, leaveRoom }) => {
     console.log("RoomId--> after accepting the request", roomid);
     console.log(leaveRoom);
@@ -165,6 +226,14 @@ io.on("connection", (socket) => {
     console.log("User disconnected");
   });
 });
+
+// connectKafkaProducer().catch((err) =>
+//   console.log("Failed to connect to kafka...", err)
+// );
+
+// consumeChatRequests("chat_requests").catch((err) =>
+//   console.log("Failed to consume data from kafka...", err)
+// );
 
 // Start the server
 server.listen(PORT, () => {

@@ -93,6 +93,7 @@ const UserComponent = () => {
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [roomId, setRoomId] = useState("");
+  const [errorMessage, setErrorMessage] = useState(""); // State for error messages
 
   useEffect(() => {
     const socketInstance = getSocket();
@@ -120,13 +121,20 @@ const UserComponent = () => {
     socketInstance.on("end-chat", (message) => {
       console.log("Chat end message:", message);
       setMessages((prevMessages) => [...prevMessages, message]);
-      setRoomId("")
+      setRoomId("");
+    });
+
+    // Listen for chat request failure
+    socketInstance.on("chat-request-failed", ({ message }) => {
+      setErrorMessage(message);
     });
 
     // Cleanup function
     return () => {
       socketInstance.off("message");
       socketInstance.off("chat-accepted");
+      socketInstance.off("end-chat");
+      socketInstance.off("chat-request-failed");
       socketInstance.disconnect();
     };
   }, []);
@@ -140,18 +148,20 @@ const UserComponent = () => {
           message: inputValue,
           roomid: uuidv4(),
         });
-        setMessages((prevMessages)=>[...prevMessages,inputValue])
+        setMessages((prevMessages) => [...prevMessages, inputValue]);
       } else {
         // Send message to the existing room
         socket.emit("message", { roomid: roomId, message: inputValue });
       }
       setInputValue("");
+      setErrorMessage(""); // Clear error message when sending a new message
     }
   };
-  console.log(roomId);
+
   return (
     <div>
       <h1>User Chat Web App</h1>
+      {errorMessage && <div style={{ color: "red" }}>{errorMessage}</div>} {/* Display error message */}
       {messages.map((msg, i) => (
         <div key={i}>
           <h4>{msg}</h4>
@@ -169,3 +179,4 @@ const UserComponent = () => {
 };
 
 export default UserComponent;
+
