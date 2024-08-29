@@ -95,6 +95,28 @@ const UserComponent = () => {
   const [roomId, setRoomId] = useState("");
   const [errorMessage, setErrorMessage] = useState(""); // State for error messages
 
+
+  useEffect(() => {
+    
+    if(roomId){
+      const handleBeforeUnload = (event) => {
+        // Custom message is not supported in most browsers
+        const message = 'Are you sure you want to leave? Changes you made may not be saved.';
+        event.preventDefault(); // Required for older browsers
+        event.returnValue = message; // Standard for modern browsers
+        return message; // For some older browsers
+      };
+  
+      // Add the event listener
+      window.addEventListener('beforeunload', handleBeforeUnload);
+  
+      // Clean up the event listener when the component unmounts
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [])
+
   useEffect(() => {
     const socketInstance = getSocket();
     setSocket(socketInstance);
@@ -118,8 +140,9 @@ const UserComponent = () => {
     });
 
     // Listen for End Chat
-    socketInstance.on("end-chat", (message) => {
+    socketInstance.on("end-chat", ({message,chatRequests}) => {
       console.log("Chat end message:", message);
+      console.log("form 37",chatRequests)
       setMessages((prevMessages) => [...prevMessages, message]);
       setRoomId("");
     });
@@ -140,15 +163,20 @@ const UserComponent = () => {
   }, []);
 
   const handleSendMsg = () => {
+
     if (inputValue.trim()) {
+      let roomid;
       if (!roomId) {
+        roomid=uuidv4()
         // Send chat request if roomId is not set
         socket.emit("request-from-user", {
           SupportRroom: "Support-room",
-          message: inputValue,
-          roomid: uuidv4(),
+          roomid: roomid,
+          // message:inputValue
+          message: {[roomid]:inputValue},
         });
         setMessages((prevMessages) => [...prevMessages, inputValue]);
+        localStorage.setItem(`message_${roomId}`,messages)
       } else {
         // Send message to the existing room
         socket.emit("message", { roomid: roomId, message: inputValue });
@@ -157,7 +185,15 @@ const UserComponent = () => {
       setErrorMessage(""); // Clear error message when sending a new message
     }
   };
-
+    const handleEndChat = () => {
+    console.log(roomId)
+    if (roomId) {
+      socket.emit("end-chat", { roomId: roomId,joinRoom:"Support-room" ,user:true});
+      console.log('end chat happed')
+      setRoomId(""); 
+    }
+  };
+console.log(roomId)
   return (
     <div>
       <h1>User Chat Web App</h1>
@@ -174,6 +210,7 @@ const UserComponent = () => {
         style={{ padding: "0.6rem" }}
       />
       <button onClick={handleSendMsg}>Send</button>
+      <button onClick={handleEndChat} >End Chat</button>
     </div>
   );
 };
