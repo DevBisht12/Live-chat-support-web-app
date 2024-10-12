@@ -84,7 +84,7 @@ io.on("connection", (socket) => {
       chatRequests[chatRequestIndex].active= true
     }
 
-    console.log("chat request 53", chatRequests);
+    // console.log("chat request 53", chatRequests);
 
     io.emit("chat-requests-updated", chatRequests);
 
